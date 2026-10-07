@@ -1,0 +1,20 @@
+# Byte-compiled / optimizado / DLL
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Herramientas
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
