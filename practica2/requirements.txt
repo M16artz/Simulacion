@@ -1,0 +1,8 @@
+# Dependencias activas (modelos matemáticos + gráfica comparativa)
+numpy>=2.0
+matplotlib>=3.8
+PyQt6
+# Dependencias para etapas posteriores de la práctica
+scipy
+pandas
+# pynetlogo
