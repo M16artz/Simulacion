@@ -1,0 +1,138 @@
+; Modelo SIR en NetLogo 6.x/7.x.
+; Este archivo genera la serie local de NetLogo y compara contra Python.
+; La comparacion con Java se omite a proposito: solo se importa Python.
+; Los graficos, botones y pens se crean desde la pestana Interface (ver README).
+extensions [csv]
+
+globals [
+  beta gamma poblacion pasos
+  datos-python datos-netlogo
+]
+turtles-own [estado-sir]
+
+; Misma formulacion diferencial de la guia (referencia matematica).
+to-report derivadas-sir [susceptibles infectados recuperados]
+  let total susceptibles + infectados + recuperados
+  if total <= 0 [ error "La poblacion debe ser positiva" ]
+  let contagios beta * susceptibles * infectados / total
+  let recuperaciones gamma * infectados
+  report (list (0 - contagios) (contagios - recuperaciones) recuperaciones)
+end
+
+to-report numero-reproductivo-basico
+  if gamma <= 0 [ error "Gamma debe ser positiva" ]
+  report beta / gamma
+end
+
+to preparar
+  clear-all
+  set beta 0.30
+  set gamma 0.10
+  set poblacion 100
+  set pasos 100
+  random-seed 42
+  create-turtles poblacion [
+    setxy random-xcor random-ycor
+    set estado-sir "S"
+    set color blue
+    set shape "person"
+    set size 1.2
+  ]
+  let infectados-iniciales 5
+  ask n-of infectados-iniciales turtles [ set estado-sir "I" set color red ]
+  set datos-python []
+  set datos-netlogo []
+  reset-ticks
+  guardar-registro
+  show (word "S inicial=" count turtles with [estado-sir = "S"]
+    ", I inicial=" count turtles with [estado-sir = "I"]
+    ", R0=" numero-reproductivo-basico)
+  show (word "dS, dI, dR iniciales: "
+    (derivadas-sir (poblacion - infectados-iniciales) infectados-iniciales 0))
+end
+
+to avanzar
+  if ticks >= pasos [ stop ]
+  let infectados-anteriores count turtles with [estado-sir = "I"]
+  let probabilidad-contagio (1 - ((1 - beta / poblacion) ^ infectados-anteriores))
+  ; Agentset separado: los recien infectados no se recuperan hasta el proximo paso.
+  let infectados-actuales turtles with [estado-sir = "I"]
+  let susceptibles-actuales turtles with [estado-sir = "S"]
+  ask susceptibles-actuales [
+    if random-float 1 < probabilidad-contagio [ set estado-sir "I" set color red ]
+  ]
+  ask infectados-actuales [
+    if random-float 1 < gamma [ set estado-sir "R" set color green ]
+  ]
+  tick
+  guardar-registro
+  actualizar-grafica-local
+end
+
+to guardar-registro
+  set datos-netlogo lput (list ticks
+    (count turtles with [estado-sir = "S"])
+    (count turtles with [estado-sir = "I"])
+    (count turtles with [estado-sir = "R"])) datos-netlogo
+end
+
+to exportar-netlogo
+  csv:to-file "resultados_netlogo.csv"
+    (fput (list "tiempo" "susceptibles" "infectados" "recuperados") datos-netlogo)
+end
+
+to cargar-python
+  set datos-python cargar-serie "resultados_python.csv"
+  actualizar-graficas-importadas
+end
+
+to-report cargar-serie [nombre-archivo]
+  if not file-exists? nombre-archivo [
+    user-message (word "Archivo no encontrado: " nombre-archivo)
+    report []
+  ]
+  let filas csv:from-file nombre-archivo
+  if empty? filas [ report [] ]
+  let encabezado first filas
+  if encabezado != (list "tiempo" "susceptibles" "infectados" "recuperados") [
+    user-message (word "Encabezado inesperado: " encabezado)
+    report []
+  ]
+  report but-first filas
+end
+
+to actualizar-grafica-local
+  set-current-plot "SIR NetLogo"
+  clear-plot
+  graficar-series datos-netlogo "S" "I" "R"
+end
+
+; Actualiza la grafica de Python y las tres comparaciones Python vs NetLogo.
+to actualizar-graficas-importadas
+  set-current-plot "SIR Python"
+  clear-plot
+  graficar-series datos-python "S" "I" "R"
+  set-current-plot "Comparacion infectados"
+  clear-plot
+  graficar-columna datos-python 2 "Python"
+  graficar-columna datos-netlogo 2 "NetLogo"
+  set-current-plot "Comparacion susceptibles"
+  clear-plot
+  graficar-columna datos-python 1 "Python"
+  graficar-columna datos-netlogo 1 "NetLogo"
+  set-current-plot "Comparacion recuperados"
+  clear-plot
+  graficar-columna datos-python 3 "Python"
+  graficar-columna datos-netlogo 3 "NetLogo"
+end
+
+to graficar-series [datos lapiz-s lapiz-i lapiz-r]
+  graficar-columna datos 1 lapiz-s
+  graficar-columna datos 2 lapiz-i
+  graficar-columna datos 3 lapiz-r
+end
+
+to graficar-columna [datos columna nombre-lapiz]
+  set-current-plot-pen nombre-lapiz
+  foreach datos [fila -> plotxy (item 0 fila) (item columna fila)]
+end

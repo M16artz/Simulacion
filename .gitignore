@@ -3,3 +3,11 @@
 .env.*
 !.env.example
 !.env.sample
+
+# Entornos virtuales de Python
+venv/
+.venv/
+
+# Caché de Python
+__pycache__/
+*.py[cod]
